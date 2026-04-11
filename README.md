@@ -91,6 +91,18 @@ jupyter lab
 No navegador, abra:
 
 ```text
+http://localhost:8888/tree
+```
+
+Em algumas execucoes, o Jupyter exibira no terminal um link com token, por exemplo:
+
+```text
+http://localhost:8888/tree?token=...
+```
+
+Depois, navegue ate:
+
+```text
 notebook/estatistica.ipynb
 ```
 
