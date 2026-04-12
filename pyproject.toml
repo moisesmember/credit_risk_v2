@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "credit-risk-v2"
+version = "0.1.0"
+description = "Reusable credit risk data pipeline with MinIO-backed dataset and model storage."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "kagglehub==1.0.0",
+  "pandas",
+  "numpy",
+  "scipy",
+  "scikit-learn",
+  "imbalanced-learn",
+  "optuna",
+  "minio",
+]
+
+[project.optional-dependencies]
+notebooks = [
+  "ipykernel==7.2.0",
+  "notebook==7.5.5",
+  "matplotlib",
+  "seaborn",
+]
+
+[project.scripts]
+credit-risk-ingest = "credit_risk.cli:ingest_credit_risk_dataset_main"
+credit-risk-read = "credit_risk.cli:read_credit_risk_dataset_main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

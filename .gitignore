@@ -17,6 +17,7 @@ notebook/.ipynb_checkpoints/
 
 # Local data artifacts
 # data/
+.env
 
 # Editor and OS files
 .DS_Store
