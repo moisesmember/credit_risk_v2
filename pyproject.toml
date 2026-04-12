@@ -17,6 +17,9 @@ dependencies = [
   "imbalanced-learn",
   "optuna",
   "minio",
+  "fastapi",
+  "uvicorn",
+  "pydantic",
 ]
 
 [project.optional-dependencies]
@@ -30,6 +33,7 @@ notebooks = [
 [project.scripts]
 credit-risk-ingest = "credit_risk.cli:ingest_credit_risk_dataset_main"
 credit-risk-read = "credit_risk.cli:read_credit_risk_dataset_main"
+credit-risk-api = "credit_risk.api.main:run"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

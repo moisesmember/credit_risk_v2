@@ -24,6 +24,7 @@ Os notebooks do projeto agora usam o MinIO como fonte unificada de dados. O arqu
 credit_risk_v2/
 |-- src/
 |   `-- credit_risk/
+|       |-- api/
 |       |-- cli.py
 |       |-- config.py
 |       |-- data/
@@ -206,7 +207,52 @@ Alternativa via script:
 python .\scripts\read_credit_risk_dataset.py --month 2026-04
 ```
 
-### 6. Iniciar o Jupyter
+### 6. Subir a API FastAPI
+
+Para expor a ingestao via HTTP:
+
+```powershell
+credit-risk-api
+```
+
+Alternativa com `uvicorn`:
+
+```powershell
+uvicorn credit_risk.api.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Endpoints principais:
+
+- API base: `http://localhost:8000`
+- Swagger UI: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
+- Healthcheck: `GET http://localhost:8000/health`
+
+Rota de ingestao:
+
+```text
+POST /datasets/credit-risk/ingest
+```
+
+Exemplo de payload:
+
+```json
+{
+  "local_path": "data/credit_risk_dataset.csv",
+  "month": "2026-04",
+  "overwrite": false
+}
+```
+
+Exemplo com `curl`:
+
+```bash
+curl -X POST "http://localhost:8000/datasets/credit-risk/ingest" \
+  -H "Content-Type: application/json" \
+  -d "{\"local_path\":\"data/credit_risk_dataset.csv\",\"month\":\"2026-04\",\"overwrite\":false}"
+```
+
+### 7. Iniciar o Jupyter
 
 ```powershell
 jupyter notebook
@@ -218,7 +264,7 @@ Se preferir, voce tambem pode usar:
 jupyter lab
 ```
 
-### 7. Abrir o notebook do projeto
+### 8. Abrir o notebook do projeto
 
 No navegador, abra:
 
@@ -244,7 +290,7 @@ Todos os notebooks foram ajustados para:
 - importar `load_credit_risk_dataset` do pacote do projeto;
 - ler o dataset do MinIO, em vez de acessar `../data/credit_risk_dataset.csv` diretamente.
 
-### 8. Selecionar o kernel Python
+### 9. Selecionar o kernel Python
 
 Dentro do Jupyter, selecione o kernel do ambiente virtual criado para garantir que as dependencias instaladas em `requirements.txt` sejam utilizadas.
 
@@ -257,9 +303,10 @@ Fluxo esperado:
 1. ativar o ambiente virtual;
 2. subir o MinIO;
 3. publicar o dataset com `credit-risk-ingest`;
-4. iniciar o Jupyter;
-5. abrir `notebook/estatistica.ipynb`;
-6. executar as celulas em ordem.
+4. opcionalmente subir a API com `credit-risk-api`;
+5. iniciar o Jupyter;
+6. abrir `notebook/estatistica.ipynb`;
+7. executar as celulas em ordem.
 
 O projeto agora tambem possui uma camada reutilizavel para centralizar datasets e artefatos no MinIO, evitando que cada notebook leia arquivos locais de forma diferente.
 
@@ -267,6 +314,7 @@ O projeto agora tambem possui uma camada reutilizavel para centralizar datasets 
 
 A estrutura em `src/credit_risk` foi organizada para servir como base de pipeline:
 
+- `api/`: app FastAPI com healthcheck, rota de ingestao e Swagger;
 - `cli.py`: entry points de linha de comando para ingestao e leitura;
 - `config.py`: configuracao de conexao ao MinIO via variaveis de ambiente;
 - `storage/`: cliente MinIO e convencoes de paths para datasets, catalogos e modelos;
@@ -341,8 +389,9 @@ registry.save_pickle(
 1. subir o MinIO com `docker compose up -d`;
 2. instalar o projeto com `pip install -e ".[notebooks]"`;
 3. publicar o dataset com `credit-risk-ingest`;
-4. ler dados no codigo com `load_credit_risk_dataset()`;
-5. persistir modelos e artefatos no MinIO com `ModelRegistry`.
+4. opcionalmente expor a API com `credit-risk-api`;
+5. ler dados no codigo com `load_credit_risk_dataset()`;
+6. persistir modelos e artefatos no MinIO com `ModelRegistry`.
 
 ### Testes
 
@@ -358,6 +407,8 @@ Execucao:
 ```powershell
 python -m unittest discover -s tests\unit -v
 ```
+
+O teste da API usa `FastAPI TestClient` quando `fastapi` estiver instalado no ambiente.
 
 ## Observacoes
 
