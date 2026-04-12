@@ -1,6 +1,6 @@
-# Análise de Risco de Crédito
+# Analise de Risco de Credito
 
-Projeto de estudo para analise exploratoria e preparacao de dados de risco de credito a partir do dataset **Credit Risk Dataset**, publicado no Kaggle por **Lao Tse**.
+Projeto de estudo para analise exploratoria, modelagem e organizacao de pipeline de dados para risco de credito a partir do dataset **Credit Risk Dataset**, publicado no Kaggle por **Lao Tse**.
 
 Fonte oficial dos dados:
 https://www.kaggle.com/datasets/laotse/credit-risk-dataset
@@ -9,14 +9,12 @@ Segundo a pagina do dataset no Kaggle, a base "contains columns simulating credi
 
 ## Objetivo
 
-Este repositorio organiza um ambiente simples para explorar uma base tabular de risco de credito com foco em:
+Este repositorio foi evoluido para cobrir duas frentes:
 
-- compreensao das variaveis da base;
-- analise estatistica inicial;
-- apoio a futuras etapas de modelagem preditiva;
-- reproducao do fluxo em **Jupyter Notebook**.
+- estudo analitico com notebooks;
+- base reutilizavel de engenharia para ingestao, armazenamento e leitura de dados via MinIO.
 
-Os notebooks do projeto agora usam o MinIO como fonte unificada de dados. O arquivo local `data/credit_risk_dataset.csv` funciona apenas como staging opcional para a etapa de ingestao.
+O MinIO passou a ser a fonte unificada de leitura dos notebooks e do codigo Python. O arquivo local `data/credit_risk_dataset.csv` funciona apenas como staging opcional da ingestao.
 
 ## Estrutura do projeto
 
@@ -25,39 +23,47 @@ credit_risk_v2/
 |-- src/
 |   `-- credit_risk/
 |       |-- api/
-|       |-- cli.py
-|       |-- config.py
 |       |-- data/
 |       |-- datasets/
 |       |-- models/
-|       `-- storage/
+|       |-- storage/
+|       |-- cli.py
+|       |-- config.py
+|       `-- logging_utils.py
 |-- scripts/
 |   |-- ingest_credit_risk_dataset.py
 |   `-- read_credit_risk_dataset.py
+|-- tests/
+|   `-- unit/
+|-- notebook/
+|   |-- estatistica.ipynb
+|   |-- probabilidades_inferencias.ipynb
+|   |-- modelagem_risco_credito.ipynb
+|   |-- modelagem_risco_credito_feature_selection_automl.ipynb
+|   `-- modelagem_risco_credito_automl_optuna_top3.ipynb
 |-- data/
 |   `-- credit_risk_dataset.csv
-|-- notebook/
-|   `-- estatistica.ipynb
 |-- docker-compose.yml
 |-- .env.example
 |-- pyproject.toml
 |-- requirements.txt
+|-- sitecustomize.py
 `-- README.md
 ```
 
 ## Dataset
 
-O arquivo local utilizado no projeto e `data/credit_risk_dataset.csv`.
+Arquivo principal:
 
-Com base no arquivo presente neste repositorio, a base possui:
+- `data/credit_risk_dataset.csv`
+
+Resumo da base:
 
 - 12 colunas;
-- 32.581 registros de dados;
-- variavel alvo binaria em `loan_status`.
+- 32.581 registros;
+- target binario em `loan_status`.
 
 ### Dicionario de dados
-
-As descricoes abaixo foram organizadas a partir da pagina do dataset no Kaggle:
 
 | Coluna | Descricao |
 | --- | --- |
@@ -74,9 +80,9 @@ As descricoes abaixo foram organizadas a partir da pagina do dataset no Kaggle:
 | `cb_person_default_on_file` | Historico de inadimplencia em arquivo |
 | `cb_person_cred_hist_length` | Tempo de historico de credito |
 
-## Como executar
+## Instalacao
 
-### 1. Criar e ativar um ambiente virtual
+### 1. Criar e ativar ambiente virtual
 
 No Windows PowerShell:
 
@@ -87,42 +93,50 @@ python -m venv venv
 
 ### 2. Instalar o projeto
 
-Opcao recomendada com `pyproject.toml`:
+Fluxo recomendado:
 
 ```powershell
 python -m pip install --upgrade pip
 pip install -e ".[notebooks]"
 ```
 
-Se preferir manter o fluxo anterior:
+Alternativa:
 
 ```powershell
 pip install -r requirements.txt
 ```
 
-O projeto usa layout `src/` e passa a funcionar como pacote instalavel. Isso facilita:
+O projeto usa layout `src/`, `pyproject.toml` e entry points instalaveis. Isso simplifica imports, execucao de scripts e testes.
 
-- imports consistentes em notebooks, scripts e testes;
-- entry points de linha de comando;
-- reutilizacao do pipeline fora da raiz do repositorio.
+## MinIO
 
-### 3. Subir o MinIO
+### 1. Configurar variaveis
 
 Copie `.env.example` para `.env` e ajuste se necessario.
 
-Depois, inicie o MinIO:
+Variaveis principais:
+
+- `MINIO_ENDPOINT`: endpoint usado pela aplicacao Python
+- `MINIO_ACCESS_KEY`: usuario raiz do MinIO
+- `MINIO_SECRET_KEY`: senha raiz do MinIO
+- `MINIO_BUCKET`: bucket padrao do projeto
+- `MINIO_SECURE`: `false` para ambiente local com HTTP
+- `MINIO_API_PORT`: porta da API S3
+- `MINIO_CONSOLE_PORT`: porta do console web
+
+### 2. Subir os servicos
 
 ```powershell
 docker compose up -d
 ```
 
-Para acompanhar os logs do container:
+Logs:
 
 ```powershell
 docker compose logs -f minio
 ```
 
-Para parar os servicos:
+Parar:
 
 ```powershell
 docker compose down
@@ -137,62 +151,70 @@ Bucket padrao:
 
 - `credit-risk`
 
-Variaveis principais do `.env`:
+## Ingestao do dataset
 
-- `MINIO_ENDPOINT`: endpoint usado pela aplicacao Python;
-- `MINIO_ACCESS_KEY`: usuario raiz do MinIO;
-- `MINIO_SECRET_KEY`: senha raiz do MinIO;
-- `MINIO_BUCKET`: bucket padrao do projeto;
-- `MINIO_SECURE`: `false` para ambiente local com HTTP.
+### CLI
 
-### 4. Publicar o dataset do Kaggle no MinIO
+Publicar o dataset no MinIO:
 
 ```powershell
 credit-risk-ingest
 ```
 
-Fluxo do script:
+Com mes especifico:
 
-- se `data/credit_risk_dataset.csv` ja existir, ele usa esse arquivo como staging local;
-- se o arquivo local nao existir, ele baixa o dataset do Kaggle via `kagglehub`;
-- se o objeto mensal ja existir no MinIO, ele nao faz novo upload do CSV;
-- se necessario, ele apenas atualiza o manifesto `latest.json`.
+```powershell
+credit-risk-ingest --month 2026-04
+```
 
-Esse passo precisa ser executado antes de abrir os notebooks, porque eles leem o dataset a partir do MinIO.
+Forcando overwrite:
 
-Alternativa sem instalar o entry point:
+```powershell
+credit-risk-ingest --month 2026-04 --force
+```
+
+Alternativa via script:
 
 ```powershell
 python .\scripts\ingest_credit_risk_dataset.py
 ```
 
-Por padrao, o dataset sera salvo no bucket configurado com a estrutura:
+### Comportamento da ingestao
+
+Fluxo da ingestao:
+
+- se `data/credit_risk_dataset.csv` existir, ele e usado como staging local;
+- se o arquivo local nao existir, o projeto baixa a base do Kaggle via `kagglehub`;
+- se o objeto mensal ja existir no MinIO, o CSV nao e reenviado;
+- se o objeto existir mas o manifesto estiver ausente ou stale, apenas o `latest.json` e atualizado.
+
+Estrutura de armazenamento do dataset:
 
 ```text
 datasets/raw/credit_risk_dataset/YYYY-MM/credit_risk_dataset.csv
 ```
 
-O manifesto do ultimo upload fica em:
+Manifesto da ultima versao:
 
 ```text
 _catalog/datasets/raw/credit_risk_dataset/latest.json
 ```
 
-Para sobrescrever o objeto do mes explicitamente:
+## Leitura unificada do dataset
 
-```powershell
-credit-risk-ingest --force
-```
-
-### 5. Ler o dataset de forma unificada a partir do MinIO
-
-Exemplo rapido:
+### CLI
 
 ```powershell
 credit-risk-read
 ```
 
-Uso em Python:
+Com mes especifico:
+
+```powershell
+credit-risk-read --month 2026-04
+```
+
+### Uso em Python
 
 ```python
 from credit_risk.datasets import load_credit_risk_dataset
@@ -201,15 +223,11 @@ df = load_credit_risk_dataset()
 df_mes_fechado = load_credit_risk_dataset(month="2026-04")
 ```
 
-Alternativa via script:
+Essa leitura usa o MinIO como fonte oficial e resolve o dataset pelo manifesto `latest.json` quando nenhum mes e informado.
 
-```powershell
-python .\scripts\read_credit_risk_dataset.py --month 2026-04
-```
+## API FastAPI
 
-### 6. Subir a API FastAPI
-
-Para expor a ingestao via HTTP:
+### Subir a API
 
 ```powershell
 credit-risk-api
@@ -221,20 +239,15 @@ Alternativa com `uvicorn`:
 uvicorn credit_risk.api.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-Endpoints principais:
+### Endpoints
 
 - API base: `http://localhost:8000`
 - Swagger UI: `http://localhost:8000/docs`
 - ReDoc: `http://localhost:8000/redoc`
-- Healthcheck: `GET http://localhost:8000/health`
+- Healthcheck: `GET /health`
+- Ingestao: `POST /datasets/credit-risk/ingest`
 
-Rota de ingestao:
-
-```text
-POST /datasets/credit-risk/ingest
-```
-
-Exemplo de payload:
+### Exemplo de payload
 
 ```json
 {
@@ -244,7 +257,7 @@ Exemplo de payload:
 }
 ```
 
-Exemplo com `curl`:
+### Exemplo com curl
 
 ```bash
 curl -X POST "http://localhost:8000/datasets/credit-risk/ingest" \
@@ -252,122 +265,47 @@ curl -X POST "http://localhost:8000/datasets/credit-risk/ingest" \
   -d "{\"local_path\":\"data/credit_risk_dataset.csv\",\"month\":\"2026-04\",\"overwrite\":false}"
 ```
 
-### 7. Iniciar o Jupyter
+## Notebooks
+
+Os notebooks foram ajustados para:
+
+- adicionar `src/` ao `sys.path` de forma robusta;
+- importar `load_credit_risk_dataset` do pacote;
+- ler o dataset do MinIO em vez de acessar CSV local diretamente.
+
+Fluxo recomendado para notebooks:
+
+1. ativar o ambiente virtual;
+2. subir o MinIO;
+3. publicar o dataset com `credit-risk-ingest`;
+4. iniciar o Jupyter;
+5. abrir um notebook em `notebook/`;
+6. executar as celulas em ordem.
+
+Iniciar Jupyter:
 
 ```powershell
 jupyter notebook
 ```
 
-Se preferir, voce tambem pode usar:
+ou
 
 ```powershell
 jupyter lab
 ```
 
-### 8. Abrir o notebook do projeto
+## Persistencia de modelos
 
-No navegador, abra:
+O projeto tambem suporta armazenamento de modelos no MinIO.
 
-```text
-http://localhost:8888/tree
-```
-
-Em algumas execucoes, o Jupyter exibira no terminal um link com token, por exemplo:
-
-```text
-http://localhost:8888/tree?token=...
-```
-
-Depois, navegue ate:
-
-```text
-notebook/estatistica.ipynb
-```
-
-Todos os notebooks foram ajustados para:
-
-- adicionar `src/` ao `sys.path` de forma robusta;
-- importar `load_credit_risk_dataset` do pacote do projeto;
-- ler o dataset do MinIO, em vez de acessar `../data/credit_risk_dataset.csv` diretamente.
-
-### 9. Selecionar o kernel Python
-
-Dentro do Jupyter, selecione o kernel do ambiente virtual criado para garantir que as dependencias instaladas em `requirements.txt` sejam utilizadas.
-
-## Uso com Jupyter
-
-Este projeto foi organizado para ser executado principalmente no **Jupyter Notebook**.
-
-Fluxo esperado:
-
-1. ativar o ambiente virtual;
-2. subir o MinIO;
-3. publicar o dataset com `credit-risk-ingest`;
-4. opcionalmente subir a API com `credit-risk-api`;
-5. iniciar o Jupyter;
-6. abrir `notebook/estatistica.ipynb`;
-7. executar as celulas em ordem.
-
-O projeto agora tambem possui uma camada reutilizavel para centralizar datasets e artefatos no MinIO, evitando que cada notebook leia arquivos locais de forma diferente.
-
-## Pipeline reutilizavel com MinIO
-
-A estrutura em `src/credit_risk` foi organizada para servir como base de pipeline:
-
-- `api/`: app FastAPI com healthcheck, rota de ingestao e Swagger;
-- `cli.py`: entry points de linha de comando para ingestao e leitura;
-- `config.py`: configuracao de conexao ao MinIO via variaveis de ambiente;
-- `storage/`: cliente MinIO e convencoes de paths para datasets, catalogos e modelos;
-- `data/catalog.py`: publicacao e leitura versionada de datasets;
-- `logging_utils.py`: configuracao simples de logs para scripts e pipeline;
-- `datasets/credit_risk.py`: API unificada para o dataset principal do projeto;
-- `models/registry.py`: persistencia de modelos e outros artefatos de ML.
-
-### Como os notebooks leem dados
-
-Exemplo do padrao agora usado nos notebooks:
-
-```python
-from credit_risk.datasets import load_credit_risk_dataset
-
-df = load_credit_risk_dataset()
-```
-
-Isso faz a leitura a partir do manifesto `latest.json` no MinIO. Se quiser analisar um mes especifico:
-
-```python
-df = load_credit_risk_dataset(month="2026-04")
-```
-
-### Convencao de armazenamento
-
-Datasets brutos:
-
-```text
-datasets/raw/<dataset_name>/<YYYY-MM>/<arquivo>
-```
-
-Modelos treinados:
+Estrutura:
 
 ```text
 models/trained/<model_name>/<YYYY-MM>/<artifact_name>
-```
-
-Manifestos de ultima versao:
-
-```text
-_catalog/datasets/raw/<dataset_name>/latest.json
 _catalog/models/trained/<model_name>/latest.json
 ```
 
-Essa organizacao deixa o bucket preparado para receber:
-
-- datasets brutos;
-- datasets tratados;
-- modelos treinados;
-- artefatos auxiliares de pipeline, inferencia e monitoramento.
-
-### Exemplo para salvar modelo no MinIO
+Exemplo:
 
 ```python
 from sklearn.ensemble import RandomForestClassifier
@@ -384,44 +322,45 @@ registry.save_pickle(
 )
 ```
 
-### Fluxo recomendado
+## Testes
 
-1. subir o MinIO com `docker compose up -d`;
-2. instalar o projeto com `pip install -e ".[notebooks]"`;
-3. publicar o dataset com `credit-risk-ingest`;
-4. opcionalmente expor a API com `credit-risk-api`;
-5. ler dados no codigo com `load_credit_risk_dataset()`;
-6. persistir modelos e artefatos no MinIO com `ModelRegistry`.
-
-### Testes
-
-Os testes unitarios validam:
-
-- idempotencia do upload mensal do dataset;
-- fallback local/Kaggle;
-- manifestos `latest.json`;
-- persistencia e leitura de modelos.
-
-Execucao:
+Executar suite unitria:
 
 ```powershell
 python -m unittest discover -s tests\unit -v
 ```
 
-O teste da API usa `FastAPI TestClient` quando `fastapi` estiver instalado no ambiente.
+Cobertura principal:
+
+- idempotencia do upload mensal do dataset;
+- fallback local/Kaggle;
+- manifestos `latest.json`;
+- persistencia e leitura de modelos;
+- rota HTTP de ingestao quando `fastapi` estiver disponivel no ambiente.
+
+## Arquitetura resumida
+
+Componentes principais em `src/credit_risk`:
+
+- `api/`: FastAPI, Swagger e rota de ingestao
+- `cli.py`: entry points de linha de comando
+- `config.py`: configuracao via ambiente
+- `storage/`: cliente MinIO e convencoes de object paths
+- `data/catalog.py`: catalogo versionado de datasets
+- `datasets/credit_risk.py`: API de alto nivel para o dataset principal
+- `models/registry.py`: persistencia de modelos e artefatos
+- `logging_utils.py`: configuracao simples de logging
 
 ## Observacoes
 
-- Se o arquivo ja estiver disponivel em `data/credit_risk_dataset.csv`, voce pode publica-lo no MinIO e padronizar a leitura por la.
-- A pasta `data/` pode continuar sendo usada como staging local, mas o ponto de leitura recomendado para pipeline passa a ser o MinIO.
-- O script de ingestao grava por mes para facilitar historico, reprocessamento e reproducao de treino.
-- O upload do dataset mensal e idempotente: se o arquivo ja existir no MinIO, ele nao e regravado.
-- O `pyproject.toml` e agora a fonte principal de dependencias do pacote. `requirements.txt` foi mantido apenas como atalho para instalar `.[notebooks]`.
-- Se o MinIO nao estiver no ar ou se o dataset ainda nao tiver sido publicado, os notebooks nao vao conseguir carregar a base.
+- `data/` pode continuar sendo usado como staging local, mas nao deve ser tratado como fonte oficial do pipeline.
+- Se o MinIO nao estiver no ar ou se o dataset ainda nao tiver sido publicado, os notebooks nao vao carregar a base.
+- `pyproject.toml` e a fonte principal de dependencias do projeto.
+- `requirements.txt` foi mantido como atalho para instalar `-e .[notebooks]`.
 
 ## Proximos passos sugeridos
 
-- validar tipos e valores ausentes;
-- investigar distribuicoes e outliers;
-- analisar balanceamento da variavel `loan_status`;
-- preparar pipeline de treino para classificacao de risco.
+- expor rotas para leitura de manifestos e listagem de datasets/modelos;
+- adicionar persistencia de datasets tratados e features prontas para treino;
+- publicar artefatos de avaliacao e metricas no MinIO;
+- integrar treino e inferencia em servicos HTTP separados.
