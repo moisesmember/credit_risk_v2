@@ -233,11 +233,22 @@ Essa leitura usa o MinIO como fonte oficial e resolve o dataset pelo manifesto `
 credit-risk-api
 ```
 
-Alternativa com `uvicorn`:
+Alternativa com `python -m uvicorn`:
 
 ```powershell
-uvicorn credit_risk.api.main:app --host 0.0.0.0 --port 8000 --reload
+python -m uvicorn credit_risk.api.main:app --host 0.0.0.0 --port 8000 --reload
 ```
+
+Se estiver usando o ambiente virtual local, prefira:
+
+```powershell
+.\venv\Scripts\python.exe -m uvicorn credit_risk.api.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Observacao para Windows corporativo:
+
+- em alguns ambientes, `uvicorn.exe` ou outros launchers `.exe` criados pelo `pip` podem ser bloqueados por politica de seguranca;
+- nesses casos, use `python -m uvicorn ...`, que normalmente evita esse bloqueio.
 
 ### Endpoints
 
