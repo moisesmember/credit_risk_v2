@@ -26,7 +26,9 @@ credit_risk_v2/
 |       |-- data/
 |       |-- datasets/
 |       |-- models/
+|       |-- serving/
 |       |-- storage/
+|       |-- training/
 |       |-- cli.py
 |       |-- config.py
 |       `-- logging_utils.py
@@ -257,6 +259,8 @@ Observacao para Windows corporativo:
 - ReDoc: `http://localhost:8000/redoc`
 - Healthcheck: `GET /health`
 - Ingestao: `POST /datasets/credit-risk/ingest`
+- Treino: `POST /models/credit-risk/train`
+- Predicao: `POST /models/credit-risk/predict`
 
 ### Exemplo de payload
 
@@ -274,6 +278,80 @@ Observacao para Windows corporativo:
 curl -X POST "http://localhost:8000/datasets/credit-risk/ingest" \
   -H "Content-Type: application/json" \
   -d "{\"local_path\":\"data/credit_risk_dataset.csv\",\"month\":\"2026-04\",\"overwrite\":false}"
+```
+
+### Treinar o modelo de quorum Top 3
+
+O projeto implementa um pipeline de treino baseado nos notebooks:
+
+- split estratificado em treino, teste e implementacao;
+- feature engineering de dominio;
+- imputacao e normalizacao para atributos numericos;
+- imputacao e one-hot encoding para categoricos;
+- selecao de features com `mutual_info` e `RandomForest`;
+- benchmark entre familias de modelos;
+- tuning com Optuna nos 3 melhores;
+- ensemble por quorum usando a media das probabilidades dos 3 melhores modelos.
+
+O treinamento so persiste o modelo se a acuracia no conjunto de implementacao for maior ou igual ao minimo configurado. O padrao da API e `0.80`.
+
+Payload de treino:
+
+```json
+{
+  "dataset_month": "2026-04",
+  "model_name": "credit_risk_quorum_top3",
+  "minimum_accuracy": 0.80,
+  "optuna_trials": 10,
+  "threshold": 0.50,
+  "model_month": "2026-04"
+}
+```
+
+Exemplo com `curl`:
+
+```bash
+curl -X POST "http://localhost:8000/models/credit-risk/train" \
+  -H "Content-Type: application/json" \
+  -d "{\"dataset_month\":\"2026-04\",\"model_name\":\"credit_risk_quorum_top3\",\"minimum_accuracy\":0.80,\"optuna_trials\":10,\"threshold\":0.50,\"model_month\":\"2026-04\"}"
+```
+
+### Predicao em nivel de negocio
+
+A rota de predicao recebe os dados brutos da solicitacao de credito, carrega o modelo versionado do MinIO e devolve:
+
+- probabilidade de default;
+- classe prevista;
+- faixa de risco;
+- recomendacao de negocio;
+- razoes heuristicas para a decisao.
+
+Payload de exemplo:
+
+```json
+{
+  "person_age": 32,
+  "person_income": 25000,
+  "person_home_ownership": "RENT",
+  "person_emp_length": 3,
+  "loan_intent": "PERSONAL",
+  "loan_grade": "C",
+  "loan_amnt": 12000,
+  "loan_int_rate": 17.5,
+  "loan_percent_income": 0.42,
+  "cb_person_default_on_file": "Y",
+  "cb_person_cred_hist_length": 6,
+  "model_name": "credit_risk_quorum_top3",
+  "model_month": "2026-04"
+}
+```
+
+Exemplo com `curl`:
+
+```bash
+curl -X POST "http://localhost:8000/models/credit-risk/predict" \
+  -H "Content-Type: application/json" \
+  -d "{\"person_age\":32,\"person_income\":25000,\"person_home_ownership\":\"RENT\",\"person_emp_length\":3,\"loan_intent\":\"PERSONAL\",\"loan_grade\":\"C\",\"loan_amnt\":12000,\"loan_int_rate\":17.5,\"loan_percent_income\":0.42,\"cb_person_default_on_file\":\"Y\",\"cb_person_cred_hist_length\":6,\"model_name\":\"credit_risk_quorum_top3\",\"model_month\":\"2026-04\"}"
 ```
 
 ## Notebooks
@@ -316,6 +394,11 @@ models/trained/<model_name>/<YYYY-MM>/<artifact_name>
 _catalog/models/trained/<model_name>/latest.json
 ```
 
+Artefatos gerados pelo treino:
+
+- `model.pkl`: bundle completo do modelo de quorum com preprocessing, selecao de features e ensemble;
+- `training_report.json`: resumo versionado com ranking, metricas e hiperparametros.
+
 Exemplo:
 
 ```python
@@ -354,12 +437,14 @@ Cobertura principal:
 Componentes principais em `src/credit_risk`:
 
 - `api/`: FastAPI, Swagger e rota de ingestao
+- `serving/`: carregamento do modelo e resposta em linguagem de negocio
 - `cli.py`: entry points de linha de comando
 - `config.py`: configuracao via ambiente
 - `storage/`: cliente MinIO e convencoes de object paths
 - `data/catalog.py`: catalogo versionado de datasets
 - `datasets/credit_risk.py`: API de alto nivel para o dataset principal
 - `models/registry.py`: persistencia de modelos e artefatos
+- `training/`: treino, feature engineering, benchmark, tuning e modelo de quorum
 - `logging_utils.py`: configuracao simples de logging
 
 ## Observacoes
