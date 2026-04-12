@@ -125,9 +125,14 @@ class CreditApplicationRequest(BaseModel):
     cb_person_cred_hist_length: float
     model_name: str = Field(default="credit_risk_quorum_top3")
     model_month: str | None = Field(default=None)
+    decision_policy: str = Field(
+        default="balanceado",
+        description="Business decision profile. Supported values: conservador, balanceado, ousado.",
+    )
 
 
 class BusinessDecisionResponse(BaseModel):
+    policy_name: str
     risk_band: str
     recommendation: str
     reasons: list[str]
@@ -139,4 +144,5 @@ class PredictionResponse(BaseModel):
     default_probability: float
     predicted_label: int
     threshold: float
+    policy_name: str
     decision: BusinessDecisionResponse

@@ -122,10 +122,12 @@ def predict_credit_risk(payload: CreditApplicationRequest) -> PredictionResponse
     feature_payload = payload.model_dump()
     model_name = feature_payload.pop("model_name")
     model_month = feature_payload.pop("model_month")
+    decision_policy = feature_payload.pop("decision_policy")
     result = prediction_service.predict(
         payload=feature_payload,
         model_name=model_name,
         month=model_month,
+        policy_name=decision_policy,
     )
     return PredictionResponse(
         model_name=result.model_name,
@@ -133,7 +135,9 @@ def predict_credit_risk(payload: CreditApplicationRequest) -> PredictionResponse
         default_probability=result.default_probability,
         predicted_label=result.predicted_label,
         threshold=result.threshold,
+        policy_name=result.policy_name,
         decision=BusinessDecisionResponse(
+            policy_name=result.decision.policy_name,
             risk_band=result.decision.risk_band,
             recommendation=result.decision.recommendation,
             reasons=result.decision.reasons,

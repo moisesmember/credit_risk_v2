@@ -113,10 +113,16 @@ class ApiTests(unittest.TestCase):
                 "default_probability": 0.63,
                 "predicted_label": 1,
                 "threshold": 0.5,
+                "policy_name": "conservador",
                 "decision": type(
                     "BusinessDecision",
                     (),
-                    {"risk_band": "alto", "recommendation": "rejeitar", "reasons": ["historico_de_inadimplencia"]},
+                    {
+                        "policy_name": "conservador",
+                        "risk_band": "alto",
+                        "recommendation": "rejeitar",
+                        "reasons": ["historico_de_inadimplencia"],
+                    },
                 )(),
             },
         )()
@@ -136,8 +142,10 @@ class ApiTests(unittest.TestCase):
                 "cb_person_default_on_file": "Y",
                 "cb_person_cred_hist_length": 6,
                 "model_name": "credit_risk_quorum_top3",
+                "decision_policy": "conservador",
             },
         )
 
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["policy_name"], "conservador")
         self.assertEqual(response.json()["decision"]["recommendation"], "rejeitar")

@@ -26,6 +26,7 @@ class BusinessPolicyTests(unittest.TestCase):
             0.12,
         )
 
+        self.assertEqual(decision.policy_name, "balanceado")
         self.assertEqual(decision.risk_band, "baixo")
         self.assertEqual(decision.recommendation, "aprovar")
 
@@ -41,6 +42,24 @@ class BusinessPolicyTests(unittest.TestCase):
             0.76,
         )
 
+        self.assertEqual(decision.policy_name, "balanceado")
         self.assertEqual(decision.risk_band, "alto")
         self.assertEqual(decision.recommendation, "rejeitar")
         self.assertIn("historico_de_inadimplencia", decision.reasons)
+
+    def test_same_probability_changes_with_conservative_policy(self) -> None:
+        payload = {
+            "cb_person_default_on_file": "N",
+            "loan_percent_income": 0.18,
+            "loan_int_rate": 9.0,
+            "person_income": 90000,
+            "loan_amnt": 7000,
+        }
+
+        balanced = derive_business_decision(payload, 0.18, policy_name="balanceado")
+        conservative = derive_business_decision(payload, 0.18, policy_name="conservador")
+        aggressive = derive_business_decision(payload, 0.18, policy_name="ousado")
+
+        self.assertEqual(balanced.recommendation, "aprovar")
+        self.assertEqual(conservative.recommendation, "revisao_manual")
+        self.assertEqual(aggressive.recommendation, "aprovar")

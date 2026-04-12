@@ -326,6 +326,12 @@ A rota de predicao recebe os dados brutos da solicitacao de credito, carrega o m
 - recomendacao de negocio;
 - razoes heuristicas para a decisao.
 
+Tambem existe uma regra gerenciavel de politica de decisao:
+
+- `conservador`: aprova menos e manda mais casos para revisao ou rejeicao;
+- `balanceado`: perfil padrao;
+- `ousado`: aprova mais e tolera probabilidades maiores antes de revisar ou rejeitar.
+
 Payload de exemplo:
 
 ```json
@@ -342,7 +348,8 @@ Payload de exemplo:
   "cb_person_default_on_file": "Y",
   "cb_person_cred_hist_length": 6,
   "model_name": "credit_risk_quorum_top3",
-  "model_month": "2026-04"
+  "model_month": "2026-04",
+  "decision_policy": "conservador"
 }
 ```
 
@@ -351,7 +358,7 @@ Exemplo com `curl`:
 ```bash
 curl -X POST "http://localhost:8000/models/credit-risk/predict" \
   -H "Content-Type: application/json" \
-  -d "{\"person_age\":32,\"person_income\":25000,\"person_home_ownership\":\"RENT\",\"person_emp_length\":3,\"loan_intent\":\"PERSONAL\",\"loan_grade\":\"C\",\"loan_amnt\":12000,\"loan_int_rate\":17.5,\"loan_percent_income\":0.42,\"cb_person_default_on_file\":\"Y\",\"cb_person_cred_hist_length\":6,\"model_name\":\"credit_risk_quorum_top3\",\"model_month\":\"2026-04\"}"
+  -d "{\"person_age\":32,\"person_income\":25000,\"person_home_ownership\":\"RENT\",\"person_emp_length\":3,\"loan_intent\":\"PERSONAL\",\"loan_grade\":\"C\",\"loan_amnt\":12000,\"loan_int_rate\":17.5,\"loan_percent_income\":0.42,\"cb_person_default_on_file\":\"Y\",\"cb_person_cred_hist_length\":6,\"model_name\":\"credit_risk_quorum_top3\",\"model_month\":\"2026-04\",\"decision_policy\":\"conservador\"}"
 ```
 
 ## Notebooks
