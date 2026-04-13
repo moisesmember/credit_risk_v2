@@ -81,31 +81,70 @@ class ModelRegistry:
     ) -> object:
         version = self.resolve_version(model_name=model_name, stage=stage, month=month)
         payload = self.storage.get_bytes(object_name=version.object_name)
+
+        if payload[:1] == b"{":
+            raise ValueError(
+                f"Object '{version.object_name}' appears to be JSON/text, not a pickle artifact."
+            )
+
         return pickle.loads(payload)
 
+    # def resolve_version(
+    #     self,
+    #     *,
+    #     model_name: str,
+    #     stage: str = "trained",
+    #     month: str | None = None,
+    # ) -> ModelArtifactVersion:
+    #     if month is None:
+    #         manifest_name = latest_model_manifest_name(model_name=model_name, stage=stage)
+    #         payload = self.storage.get_json(object_name=manifest_name)
+    #         return ModelArtifactVersion(**payload)
+
+    #     prefix = f"models/{stage}/{model_name}/{month}/"
+    #     objects = sorted(self.storage.list_objects(prefix=prefix))
+    #     if not objects:
+    #         raise FileNotFoundError(
+    #             f"No model found in bucket '{self.storage.bucket}' with prefix '{prefix}'."
+    #         )
+
+    #     object_name = objects[-1]
+    #     return ModelArtifactVersion(
+    #         model_name=model_name,
+    #         artifact_name=object_name.rsplit("/", 1)[-1],
+    #         stage=stage,
+    #         month=month,
+    #         object_name=object_name,
+    #         uploaded_at="unknown",
+    #     )
     def resolve_version(
         self,
         *,
         model_name: str,
         stage: str = "trained",
         month: str | None = None,
+        artifact_name: str = "model.pkl",
     ) -> ModelArtifactVersion:
         if month is None:
             manifest_name = latest_model_manifest_name(model_name=model_name, stage=stage)
             payload = self.storage.get_json(object_name=manifest_name)
             return ModelArtifactVersion(**payload)
 
-        prefix = f"models/{stage}/{model_name}/{month}/"
-        objects = sorted(self.storage.list_objects(prefix=prefix))
-        if not objects:
+        object_name = model_object_name(
+            model_name=model_name,
+            artifact_name=artifact_name,
+            month=month,
+            stage=stage,
+        )
+
+        if not self.storage.exists(object_name=object_name):
             raise FileNotFoundError(
-                f"No model found in bucket '{self.storage.bucket}' with prefix '{prefix}'."
+                f"Model artifact not found in bucket '{self.storage.bucket}': '{object_name}'."
             )
 
-        object_name = objects[-1]
         return ModelArtifactVersion(
             model_name=model_name,
-            artifact_name=object_name.rsplit("/", 1)[-1],
+            artifact_name=artifact_name,
             stage=stage,
             month=month,
             object_name=object_name,

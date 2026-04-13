@@ -104,3 +104,12 @@ class MinioStorage:
     def list_objects(self, *, prefix: str, recursive: bool = True) -> list[str]:
         objects = self.client.list_objects(self.bucket, prefix=prefix, recursive=recursive)
         return [item.object_name for item in objects]
+    
+    def exists(self, *, object_name: str) -> bool:
+        try:
+            self.client.stat_object(self.bucket, object_name)
+            return True
+        except S3Error as exc:
+            if exc.code in {"NoSuchKey", "NoSuchObject", "NoSuchBucket"}:
+                return False
+            raise
