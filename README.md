@@ -1,5 +1,24 @@
 # Analise de Risco de Credito
 
+## Visão de portfólio
+
+**Problema:** conectar análise de risco de crédito a um fluxo reproduzível de dados, treinamento e inferência.
+
+**Solução documentada:** ingestão de dados no MinIO, pacote Python com responsabilidades separadas, treinamento com seleção de modelos e endpoints FastAPI para predição.
+
+**Estágio:** estudo aplicado com dados simulados de bureau de crédito. O limiar mínimo de acurácia configurado no treino é um critério de aceitação, não um resultado medido nem uma garantia de desempenho.
+
+### Como avaliar este projeto
+
+- Consulte os exemplos de treinamento e predição abaixo para acompanhar o fluxo.
+- Examine os testes em [tests/unit](tests/unit) e a implementação em [src/credit_risk](src/credit_risk).
+- Para comunicar resultados, execute o treinamento e associe as métricas à versão do dataset, ao split e aos parâmetros utilizados.
+- Avalie precision, recall, PR-AUC, matriz de confusão e impacto do limiar, além da acurácia. Não interprete as razões heurísticas da resposta como explicações causais do modelo.
+
+### Arquitetura em uma visão
+
+Dados → ingestão → MinIO → preparação e treinamento → modelo versionado → API de inferência.
+
 Projeto de estudo para analise exploratoria, modelagem e organizacao de pipeline de dados para risco de credito a partir do dataset **Credit Risk Dataset**, publicado no Kaggle por **Lao Tse**.
 
 Fonte oficial dos dados:
